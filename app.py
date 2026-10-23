@@ -81,6 +81,46 @@ data_transform = transforms.Compose([
 # ----------------------------------------------------------------------------
 # API Endpoints
 # ----------------------------------------------------------------------------
+@app.route('/', methods=['GET'])
+def index():
+    return """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alzheimer ML API Server</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 1rem; box-sizing: border-box; }
+        .card { background: #1e293b; border: 1px solid #334155; padding: 2.2rem; border-radius: 1rem; max-width: 560px; width: 100%; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }
+        .badge { background: #10b981; color: #022c22; font-weight: bold; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; display: inline-block; }
+        h1 { margin: 0.75rem 0 0.5rem; font-size: 1.5rem; color: #f8fafc; }
+        p { color: #94a3b8; line-height: 1.5; font-size: 0.95rem; }
+        .btn { display: inline-block; background: #3b82f6; color: white; padding: 0.75rem 1.25rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; margin-top: 1rem; }
+        .btn:hover { background: #2563eb; }
+        code { background: #0f172a; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-size: 0.85rem; color: #38bdf8; }
+        ul { padding-left: 1.2rem; color: #cbd5e1; }
+        li { margin-bottom: 0.5rem; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <span class="badge">&#10003; API ONLINE</span>
+        <h1>Alzheimer ML Backend Service</h1>
+        <p>This is the <strong>PyTorch ResNet50 Inference API</strong> running on port 5000. It receives brain MRI scans from the web application and performs classification.</p>
+        
+        <p><strong>To use the main Web Application:</strong></p>
+        <a class="btn" href="http://localhost:3000">Open Web Application (Port 3000) &rarr;</a>
+        
+        <h3 style="margin-top: 1.75rem; font-size: 1.1rem; color: #f8fafc;">API Endpoints:</h3>
+        <ul>
+            <li><code>GET /health</code> &mdash; Health check & uptime status</li>
+            <li><code>POST /predict</code> &mdash; MRI scan image classification</li>
+        </ul>
+    </div>
+</body>
+</html>
+""", 200
+
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({

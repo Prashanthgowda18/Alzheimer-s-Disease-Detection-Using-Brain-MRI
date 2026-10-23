@@ -6,7 +6,7 @@ Production-quality medical app: doctors manage patients, upload brain MRI scans,
 ## Stack
 
 - Frontend: TanStack Start (React + TS), Tailwind, shadcn/ui, Recharts, jsPDF, qrcode, sonner.
-- Backend: Lovable Cloud (Supabase) — auth, Postgres, private Storage.
+- Backend: Cloud Backend (Supabase) — auth, Postgres, private Storage.
 - ML: External Flask API. `ML_API_URL` (+ optional `ML_API_KEY`) as secrets (placeholders until user sets them). Called only from `createServerFn`.
 
 ## Flask API Contract
@@ -122,7 +122,7 @@ src/
 Browser (React / TanStack Start)
       │
       ▼
-Lovable Cloud (Cloudflare Workers SSR)
+Cloud Application Host (SSR)
       │
       ├──► Supabase (Auth · Postgres · Storage)
       └──► TanStack Server Functions
@@ -193,7 +193,7 @@ Home · Auth · Doctor dashboard · Patient management · Upload workflow · Fla
 
 ## Milestones (execution order)
 
-1. Enable Lovable Cloud + single migration (enums, tables, indexes, triggers, RLS, grants, `has_role`, `finalize_prediction`) + storage bucket & policies.
+1. Enable Supabase Database & Auth + single migration (enums, tables, indexes, triggers, RLS, grants, `has_role`, `finalize_prediction`) + storage bucket & policies.
 2. Auth (`/auth`, `/reset-password`), profile trigger, role helpers.
 3. Home + theme tokens + dark mode.
 4. Patients CRUD (paginated) + `/patients` + `/patients/$id` timeline.
