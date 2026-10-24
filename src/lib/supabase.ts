@@ -1,27 +1,26 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Read values from process.env (server) or import.meta.env (client/bundler)
+// Read values from import.meta.env (Vite client) or process.env
 const supabaseUrl = 
-  (typeof process !== 'undefined' ? process.env.SUPABASE_URL : null) || 
-  (import.meta.env ? import.meta.env.VITE_SUPABASE_URL : '') || 
+  (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_SUPABASE_URL : '') ||
+  (typeof process !== 'undefined' && process.env ? process.env.SUPABASE_URL : '') || 
   '';
 
 const supabaseAnonKey = 
-  (typeof process !== 'undefined' ? process.env.SUPABASE_ANON_KEY : null) || 
-  (import.meta.env ? import.meta.env.VITE_SUPABASE_ANON_KEY : '') || 
+  (typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_SUPABASE_ANON_KEY : '') ||
+  (typeof process !== 'undefined' && process.env ? process.env.SUPABASE_ANON_KEY : '') || 
   '';
 
-const supabaseServiceRole = 
-  (typeof process !== 'undefined' ? process.env.SUPABASE_SERVICE_ROLE_KEY : null) || 
-  '';
-
-export const isSupabaseConfigured = !!supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co' && !!supabaseAnonKey;
+export const isSupabaseConfigured = !!supabaseUrl && 
+  supabaseUrl !== 'https://placeholder.supabase.co' && 
+  !supabaseUrl.includes('placeholder') && 
+  !!supabaseAnonKey && 
+  !supabaseAnonKey.includes('placeholder');
 
 export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder-key'
+  isSupabaseConfigured ? supabaseUrl : 'https://placeholder.supabase.co',
+  isSupabaseConfigured ? supabaseAnonKey : 'placeholder-key'
 );
 
-export const supabaseAdmin = supabaseServiceRole
-  ? createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseServiceRole)
-  : supabase;
+// In browser client builds, always safely reuse the public client to adhere to Row Level Security
+export const supabaseAdmin = supabase;

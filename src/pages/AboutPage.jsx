@@ -1,8 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
-
-export const Route = createFileRoute('/about')({
-  component: AboutPage,
-});
+import React from 'react';
 
 function AboutPage() {
   return (
@@ -10,7 +6,6 @@ function AboutPage() {
       <div className="demo-panel rise-in max-w-3xl mx-auto rounded-[2rem] p-6 sm:p-10 shadow-xl">
         <h1 className="demo-title text-3xl font-black mb-4">Clinical AI Model Documentation</h1>
         <p className="demo-muted text-sm mb-6">Alzheimer Stage Diagnostic Tool classification schema.</p>
-
         <div className="space-y-6 text-sm text-[var(--sea-ink-soft)] leading-relaxed">
           <section>
             <h2 className="text-lg font-bold text-[var(--sea-ink)] mb-2">1. Convolutional Neural Network (CNN)</h2>
@@ -24,15 +19,13 @@ function AboutPage() {
               <li><strong>Moderate Demented:</strong> Advanced cerebral atrophy with significant ventricular enlargement.</li>
             </ul>
           </section>
-
           <section>
             <h2 className="text-lg font-bold text-[var(--sea-ink)] mb-2">2. Diagnostic Confidence & Verification</h2>
             <p>
-              Predictions are accompanied by a decimal probability array sum (validated to equal approximately 1.0) and mapped to a clinical confidence tier (High: &gt;90%, Moderate: 75%-90%, Low: &lt;75%). 
+              Predictions are accompanied by a decimal probability array sum (validated to equal approximately 1.0) and mapped to a clinical confidence tier (High: &gt;90%, Moderate: 75%-90%, Low: &lt;75%).
               Each generated report contains a cryptographic verification URL mapped into a downloadable PDF QR code, linking directly back to the database record.
             </p>
           </section>
-
           <section>
             <h2 className="text-lg font-bold text-[var(--sea-ink)] mb-2">3. Data Security & HIPAA Statement</h2>
             <p>
@@ -44,3 +37,5 @@ function AboutPage() {
     </main>
   );
 }
+
+export default AboutPage;

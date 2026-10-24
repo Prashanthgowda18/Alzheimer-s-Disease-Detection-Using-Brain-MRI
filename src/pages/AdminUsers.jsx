@@ -1,17 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { Link } from 'react-router-dom';
 import { listUsers, setUserActive, assignRole } from '../lib/admin.functions';
 
-export const Route = createFileRoute('/_authenticated/admin/users')({
-  component: AdminUsersPanel,
-});
-
-function AdminUsersPanel() {
-  const [users, setUsers] = useState<any[]>([]);
+function AdminUsers() {
+  const [users, setUsers] = useState([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [updatingId, setUpdatingId] = useState(null);
 
   const limit = 10;
 
@@ -32,19 +28,19 @@ function AdminUsersPanel() {
     loadUsers();
   }, [page]);
 
-  const handleToggleActive = async (userId: string, currentActive: boolean) => {
+  const handleToggleActive = async (userId, currentActive) => {
     setUpdatingId(userId);
     try {
       await setUserActive({ data: { userId, active: !currentActive } });
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, is_active: !currentActive } : u));
-    } catch (err: any) {
+      setUsers(prev => prev.map(u => (u.id === userId ? { ...u, is_active: !currentActive } : u)));
+    } catch (err) {
       alert(err.message || 'Failed to update user status.');
     } finally {
       setUpdatingId(null);
     }
   };
 
-  const handleToggleRole = async (userId: string, currentRole: 'admin' | 'doctor') => {
+  const handleToggleRole = async (userId, currentRole) => {
     const newRole = currentRole === 'admin' ? 'doctor' : 'admin';
     if (!window.confirm(`Are you sure you want to change this user's role to ${newRole}?`)) {
       return;
@@ -52,8 +48,8 @@ function AdminUsersPanel() {
     setUpdatingId(userId);
     try {
       await assignRole({ data: { userId, role: newRole } });
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
-    } catch (err: any) {
+      setUsers(prev => prev.map(u => (u.id === userId ? { ...u, role: newRole } : u)));
+    } catch (err) {
       alert(err.message || 'Failed to update user role.');
     } finally {
       setUpdatingId(null);
@@ -69,9 +65,7 @@ function AdminUsersPanel() {
         to="/admin"
         className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-blue-500 transition mb-6"
       >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-        </svg>
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
         Back to Admin Control
       </Link>
 
@@ -84,13 +78,11 @@ function AdminUsersPanel() {
         <div className="demo-table-shell">
           {loading ? (
             <div className="p-12 text-center text-sm text-slate-400">
-              <div className="animate-spin inline-block w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mb-2"></div>
+              <div className="animate-spin inline-block w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mb-2" />
               <div>Retrieving registered accounts...</div>
             </div>
           ) : users.length === 0 ? (
-            <div className="p-12 text-center text-sm text-slate-400">
-              No registered user profiles found.
-            </div>
+            <div className="p-12 text-center text-sm text-slate-400">No registered user profiles found.</div>
           ) : (
             <table className="demo-table text-xs">
               <thead>
@@ -104,20 +96,16 @@ function AdminUsersPanel() {
                 </tr>
               </thead>
               <tbody>
-                {users.map((profile) => (
+                {users.map(profile => (
                   <tr key={profile.id}>
                     <td className="font-bold text-[var(--sea-ink)]">{profile.full_name}</td>
                     <td>{profile.email}</td>
                     <td>{profile.hospital_name || 'Not Affiliated'}</td>
                     <td>
-                      <span className={`capitalize font-bold ${profile.role === 'admin' ? 'text-cyan-500' : 'text-blue-500'}`}>
-                        {profile.role}
-                      </span>
+                      <span className={`capitalize font-bold ${profile.role === 'admin' ? 'text-cyan-500' : 'text-blue-500'}`}>{profile.role}</span>
                     </td>
                     <td>
-                      <span className={`font-bold ${profile.is_active ? 'text-emerald-500' : 'text-red-500'}`}>
-                        {profile.is_active ? 'Active' : 'Deactivated'}
-                      </span>
+                      <span className={`font-bold ${profile.is_active ? 'text-emerald-500' : 'text-red-500'}`}>{profile.is_active ? 'Active' : 'Deactivated'}</span>
                     </td>
                     <td className="text-right space-x-2">
                       <button
@@ -170,3 +158,5 @@ function AdminUsersPanel() {
     </main>
   );
 }
+
+export default AdminUsers;

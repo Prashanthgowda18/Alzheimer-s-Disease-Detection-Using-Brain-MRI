@@ -1,17 +1,14 @@
 import React, { useState } from 'react';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
-
-export const Route = createFileRoute('/reset-password')({
-  component: ResetPasswordPage,
-});
+import { useNavigate } from 'react-router-dom';
 
 function ResetPasswordPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
 
-  const handleReset = (e: React.FormEvent) => {
+  const handleReset = (e) => {
     e.preventDefault();
+    // TODO: integrate real password reset logic via backend API
     setSent(true);
   };
 
@@ -20,14 +17,13 @@ function ResetPasswordPage() {
       <div className="demo-panel rise-in w-full max-w-md rounded-3xl p-6 sm:p-10 shadow-2xl text-center">
         <h1 className="demo-title text-2xl font-bold tracking-tight mb-2">Password Recovery</h1>
         <p className="demo-muted text-sm mb-6">Enter your email below to receive a password reset link.</p>
-
         {sent ? (
           <div className="space-y-4">
             <div className="demo-alert text-sm border-amber-500/25 bg-amber-500/5 text-amber-500">
               Recovery instructions have been sent to <strong>{email}</strong> if an account exists.
             </div>
             <button
-              onClick={() => navigate({ to: '/auth' })}
+              onClick={() => navigate('/auth')}
               className="demo-button w-full justify-center mt-4"
             >
               Back to Login
@@ -54,7 +50,7 @@ function ResetPasswordPage() {
             </button>
             <button
               type="button"
-              onClick={() => navigate({ to: '/auth' })}
+              onClick={() => navigate('/auth')}
               className="demo-button demo-button-secondary w-full justify-center"
             >
               Cancel
@@ -65,3 +61,5 @@ function ResetPasswordPage() {
     </main>
   );
 }
+
+export default ResetPasswordPage;

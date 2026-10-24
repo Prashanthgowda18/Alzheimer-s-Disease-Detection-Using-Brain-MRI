@@ -10,7 +10,13 @@ from flask_cors import CORS
 from PIL import Image
 import io
 
+import uuid
+import datetime
+
 START_TIME = time.time()
+
+# Simple in‑memory store for predictions (demo only)
+_predictions_store = {}
 
 app = Flask(__name__)
 CORS(app)
@@ -79,7 +85,118 @@ data_transform = transforms.Compose([
 ])
 
 # ----------------------------------------------------------------------------
-# API Endpoints
+# New API endpoints for client wrapper
+@app.route('/api/predictions/upload', methods=['POST'])
+def upload_prediction():
+    # Reuse /predict logic but store result
+    request_start = time.time()
+    file = request.files.get('image') or request.files.get('file')
+    if not file:
+        return jsonify({"success": False, "error": "Missing 'image' or 'file' form data."}), 400
+    if file.filename == '':
+        return jsonify({"success": False, "error": "No file selected."}), 400
+    try:
+        image_bytes = file.read()
+        image = Image.open(io.BytesIO(image_bytes)).convert('RGB')
+        input_tensor = data_transform(image).unsqueeze(0).to(device)
+        with torch.no_grad():
+            outputs = model(input_tensor)
+            probs = torch.nn.functional.softmax(outputs, dim=1)[0]
+            confidence, preds = torch.max(probs, 0)
+        predicted_class = class_names[preds.item()]
+        probabilities = {class_names[i]: float(probs[i]) for i in range(len(class_names))}
+        stage = DISPLAY_LABELS.get(predicted_class, predicted_class)
+        recommendation = RECOMMENDATIONS.get(predicted_class, "Consult with a healthcare professional.")
+        
+        confidence_val = float(confidence)
+        confidence_level = "High" if confidence_val > 0.8 else ("Moderate" if confidence_val > 0.5 else "Low")
+
+        # Build response data
+        response_data = {
+            "success": True,
+            "stage": stage,
+            "confidence": confidence_val,
+            "confidence_level": confidence_level,
+            "recommendation": recommendation,
+            "recommendation_display": recommendation,
+            "processing_ms": int((time.time() - request_start) * 1000),
+            "model": "ResNet50",
+            "model_name": "ResNet50",
+            "version": "1.0",
+            "model_version": "1.0",
+            "probabilities": probabilities,
+        }
+        # Store with UUID
+        pred_id = str(uuid.uuid4())
+        patient_id = request.form.get('patientId') or ''
+        stored_payload = {
+            "id": pred_id,
+            "predictionId": pred_id,
+            "patient_id": patient_id,
+            "patientId": patient_id,
+            "patient_name": request.form.get('patientName', 'Clinical Patient'),
+            **response_data,
+        }
+        stored = {
+            "id": pred_id,
+            "created_at": datetime.datetime.utcnow().isoformat() + 'Z',
+            "data": stored_payload,
+        }
+        if patient_id:
+            stored["patientId"] = patient_id
+        _predictions_store[pred_id] = stored
+        # Return stored payload (including id and predictionId)
+        return jsonify({"id": pred_id, "predictionId": pred_id, "data": stored_payload, **response_data}), 200
+    except Exception as e:
+        print(f"Internal Server Error in upload_prediction: {str(e)}", file=sys.stderr)
+        return jsonify({"success": False, "error": f"Internal Server Error: {str(e)}"}), 500
+
+@app.route('/api/predictions/<pred_id>', methods=['GET'])
+def get_prediction(pred_id):
+    stored = _predictions_store.get(pred_id)
+    if not stored:
+        return jsonify({"success": False, "error": "Prediction not found."}), 404
+    # Return stored data (including id and predictionId)
+    resp = {"id": pred_id, "predictionId": pred_id, **stored["data"]}
+    return jsonify(resp), 200
+
+@app.route('/api/predictions/<pred_id>', methods=['DELETE'])
+def delete_prediction(pred_id):
+    if pred_id in _predictions_store:
+        del _predictions_store[pred_id]
+        return jsonify({"success": True, "deleted": pred_id}), 200
+    else:
+        return jsonify({"success": False, "error": "Prediction not found."}), 404
+
+@app.route('/api/predictions/me', methods=['GET'])
+def list_my_predictions():
+    # Simple pagination parameters
+    page = int(request.args.get('page', 1))
+    limit = int(request.args.get('limit', 10))
+    stage_filter = request.args.get('stage', '')
+    items = list(_predictions_store.values())
+    if stage_filter:
+        items = [i for i in items if i["data"].get("stage") == stage_filter]
+    # sort by creation (newest first)
+    items.sort(key=lambda x: x["created_at"], reverse=True)
+    start = (page - 1) * limit
+    end = start + limit
+    paged = items[start:end]
+    result = [{"id": i["id"], "predictionId": i["id"], **i["data"]} for i in paged]
+    return jsonify({"items": result, "data": result, "page": page, "limit": limit, "total": len(items)}), 200
+
+@app.route('/api/patients/<patient_id>/predictions', methods=['GET'])
+def list_patient_predictions(patient_id):
+    page = int(request.args.get('page', 1))
+    limit = int(request.args.get('limit', 10))
+    items = [i for i in _predictions_store.values() if i.get('patientId') == patient_id]
+    items.sort(key=lambda x: x["created_at"], reverse=True)
+    start = (page - 1) * limit
+    end = start + limit
+    paged = items[start:end]
+    result = [{"id": i["id"], "predictionId": i["id"], **i["data"]} for i in paged]
+    return jsonify({"items": result, "data": result, "page": page, "limit": limit, "total": len(items)}), 200
+
 # ----------------------------------------------------------------------------
 @app.route('/', methods=['GET'])
 def index():
@@ -134,10 +251,10 @@ def health():
 def predict():
     request_start = time.time()
     
-    if 'image' not in request.files:
-        return jsonify({"success": False, "error": "Invalid request: Form field 'image' containing the scan file is missing."}), 400
+    file = request.files.get('image') or request.files.get('file')
+    if not file:
+        return jsonify({"success": False, "error": "Invalid request: Form field 'image' or 'file' containing the scan file is missing."}), 400
 
-    file = request.files['image']
     if file.filename == '':
         return jsonify({"success": False, "error": "Invalid request: No file selected for upload."}), 400
 
@@ -188,4 +305,4 @@ if __name__ == '__main__':
     print("Alzheimer ML API running (PyTorch ResNet50)")
     print("URL: http://127.0.0.1:5000")
     print("*" * 50)
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    app.run(host='127.0.0.1', port=5000, debug=False)

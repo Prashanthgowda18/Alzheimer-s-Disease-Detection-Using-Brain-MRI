@@ -1,14 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { createFileRoute } from '@tanstack/react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { getActiveUser } from '../lib/auth';
-import type { UserSession } from '../lib/auth';
-
-export const Route = createFileRoute('/_authenticated/profile')({
-  component: ProfilePage,
-});
 
 function ProfilePage() {
-  const [user, setUser] = useState<UserSession | null>(null);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,7 +36,6 @@ function ProfilePage() {
         <h1 className="demo-title text-3xl font-black">User Profile</h1>
         <p className="demo-muted text-sm mt-1">Manage clinical signature and organization preferences</p>
       </div>
-
       <div className="demo-panel rounded-[2rem] p-6 sm:p-8 shadow-xl space-y-6">
         <div className="flex items-center gap-4 border-b border-[var(--line)] pb-4">
           <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-400 flex items-center justify-center text-white font-extrabold text-2xl shadow">
@@ -52,18 +46,15 @@ function ProfilePage() {
             <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">{user.role}</p>
           </div>
         </div>
-
         <div className="space-y-4 text-xs font-semibold text-slate-500">
           <div>
             <span className="block opacity-70 mb-1">Email Address</span>
             <span className="text-sm font-bold text-[var(--sea-ink)]">{user.email}</span>
           </div>
-
           <div>
             <span className="block opacity-70 mb-1">Hospital / Clinic Affiliation</span>
             <span className="text-sm font-bold text-[var(--sea-ink)]">{user.hospital_name || 'Not Configured'}</span>
           </div>
-
           <div>
             <span className="block opacity-70 mb-1">Notification Preferences</span>
             <div className="flex gap-4 mt-1.5 text-[var(--sea-ink)]">
@@ -82,3 +73,5 @@ function ProfilePage() {
     </main>
   );
 }
+
+export default ProfilePage;

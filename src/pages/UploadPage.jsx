@@ -1,34 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { createFileRoute, useNavigate, useSearch } from '@tanstack/react-router';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { listPatients } from '../lib/patients.functions';
-import { uploadAndPredict } from '../lib/predictions.functions';
-
-export const Route = createFileRoute('/_authenticated/upload')({
-  component: UploadPage,
-});
+import { uploadAndPredict } from '../lib/predictions.client';
 
 function UploadPage() {
   const navigate = useNavigate();
-  const searchParams: any = useSearch({ strict: false });
-  const initialPatientId = searchParams.patientId || '';
+  const [searchParams] = useSearchParams();
+  const initialPatientId = searchParams.get('patientId') || '';
 
-  const [patients, setPatients] = useState<any[]>([]);
+  const [patients, setPatients] = useState([]);
   const [selectedPatientId, setSelectedPatientId] = useState(initialPatientId);
-  const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  
+  const [file, setFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+
   // Pipeline status states
-  const [status, setStatus] = useState<'idle' | 'uploading' | 'processing' | 'finalizing' | 'error' | 'success'>('idle');
+  const [status, setStatus] = useState('idle'); // 'idle' | 'uploading' | 'processing' | 'finalizing' | 'error' | 'success'
   const [errorMessage, setErrorMessage] = useState('');
   const [requestId, setRequestId] = useState('');
 
   useEffect(() => {
-    // Load patient options for dropdown select
     const loadPatients = async () => {
       try {
         const res = await listPatients({ data: { limit: 100 } });
         setPatients(res.data || []);
-        // If no patient was preselected in URL, default to first option
         if (!selectedPatientId && res.data && res.data.length > 0) {
           setSelectedPatientId(res.data[0].id);
         }
@@ -39,14 +33,14 @@ function UploadPage() {
     loadPatients();
   }, []);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       validateAndSetFile(selectedFile);
     }
   };
 
-  const validateAndSetFile = (selectedFile: File) => {
+  const validateAndSetFile = (selectedFile) => {
     setErrorMessage('');
     const maxBytes = 10 * 1024 * 1024; // 10MB
     if (selectedFile.size > maxBytes) {
@@ -55,7 +49,6 @@ function UploadPage() {
       setPreviewUrl(null);
       return;
     }
-
     const allowedMime = ['image/jpeg', 'image/png', 'image/webp'];
     if (!allowedMime.includes(selectedFile.type)) {
       setErrorMessage('Invalid file format. Only JPEG, PNG and WEBP scans are accepted.');
@@ -63,18 +56,17 @@ function UploadPage() {
       setPreviewUrl(null);
       return;
     }
-
     setFile(selectedFile);
     setPreviewUrl(URL.createObjectURL(selectedFile));
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e) => {
     e.preventDefault();
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = (e) => {
     e.preventDefault();
-    if (status !== 'idle' && status !== 'error') return; // Disable if uploading
+    if (status !== 'idle' && status !== 'error') return;
     const droppedFile = e.dataTransfer.files?.[0];
     if (droppedFile) {
       validateAndSetFile(droppedFile);
@@ -90,36 +82,31 @@ function UploadPage() {
       setErrorMessage('Please choose or drop a brain scan file.');
       return;
     }
-
     setStatus('uploading');
     setErrorMessage('');
-    
     try {
       const formData = new FormData();
+      formData.append('image', file);
       formData.append('file', file);
       formData.append('patientId', selectedPatientId);
+      const selPat = patients.find(p => p.id === selectedPatientId);
+      if (selPat) {
+        formData.append('patientName', selPat.patient_name);
+      }
 
-      // 1. Upload scan
-      setStatus('uploading');
-      
       // Simulate step delay slightly for better UX feel
       await new Promise(r => setTimeout(r, 600));
-      
-      // 2. inference processing
+
       setStatus('processing');
-      
       const response = await uploadAndPredict({ data: formData });
-      
-      // 3. saving notification and database updates
+
       setStatus('finalizing');
       await new Promise(r => setTimeout(r, 700));
 
       setStatus('success');
-      
-      // Navigate to results screen
-      navigate({ to: `/result/${response.predictionId}` });
-      
-    } catch (err: any) {
+      const targetId = response.id || response.predictionId;
+      navigate(`/result/${targetId}`);
+    } catch (err) {
       setStatus('error');
       setErrorMessage(err.message || 'An unexpected error occurred during prediction analysis.');
       if (err.request_id) {
@@ -158,16 +145,10 @@ function UploadPage() {
 
         {/* 1. Patient Selection */}
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-            Target Patient Chart
-          </label>
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Target Patient Chart</label>
           {patients.length === 0 ? (
             <div className="text-sm text-amber-600 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
-              No patients registered. Please create a{' '}
-              <a href="/patients" className="font-bold underline text-amber-700">
-                patient profile
-              </a>{' '}
-              first.
+              No patients registered. Please create a <a href="/patients" className="font-bold underline text-amber-700">patient profile</a> first.
             </div>
           ) : (
             <select
@@ -187,9 +168,7 @@ function UploadPage() {
 
         {/* 2. Drag & Drop File Zone */}
         <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-            Brain Scan File
-          </label>
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Brain Scan File</label>
           <div
             onDragOver={handleDragOver}
             onDrop={handleDrop}
@@ -209,11 +188,7 @@ function UploadPage() {
 
             {previewUrl ? (
               <div className="relative group">
-                <img
-                  src={previewUrl}
-                  alt="Scan Preview"
-                  className="max-h-40 rounded-xl border border-[var(--line)] shadow"
-                />
+                <img src={previewUrl} alt="Scan Preview" className="max-h-40 rounded-xl border border-[var(--line)] shadow" />
                 {!isUploading && (
                   <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
                     <span className="text-white text-xs font-bold">Replace Scan</span>
@@ -225,12 +200,8 @@ function UploadPage() {
                 <svg className="w-10 h-10 text-slate-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <p className="text-sm font-bold text-[var(--sea-ink)]">
-                  Drag and drop tomography scan image here
-                </p>
-                <p className="text-xs text-slate-400 mt-1">
-                  Supports JPEG, PNG, and WEBP formats up to 10 MB
-                </p>
+                <p className="text-sm font-bold text-[var(--sea-ink)]">Drag and drop tomography scan image here</p>
+                <p className="text-xs text-slate-400 mt-1">Supports JPEG, PNG, and WEBP formats up to 10 MB</p>
               </>
             )}
           </div>
@@ -243,28 +214,21 @@ function UploadPage() {
               <div className="animate-spin inline-block w-3.5 h-3.5 border border-blue-500 border-t-transparent rounded-full" />
               Diagnostic Analysis Pipeline
             </h4>
-            
             <div className="space-y-3 text-xs font-semibold text-slate-500">
               <div className="flex items-center justify-between">
-                <span className={status === 'uploading' ? 'text-blue-500 font-bold' : status !== 'idle' && status !== 'error' ? 'text-emerald-500 font-bold' : ''}>
-                  1. Uploading scan image to storage bucket
-                </span>
+                <span className={status === 'uploading' ? 'text-blue-500 font-bold' : status !== 'idle' && status !== 'error' ? 'text-emerald-500 font-bold' : ''}>1. Uploading scan image to storage bucket</span>
                 {status !== 'uploading' && status !== 'idle' && status !== 'error' && (
                   <span className="text-emerald-500">✓</span>
                 )}
               </div>
               <div className="flex items-center justify-between">
-                <span className={status === 'processing' ? 'text-blue-500 font-bold' : status === 'finalizing' || status === 'success' ? 'text-emerald-500 font-bold' : ''}>
-                  2. Running ResNet50 classification inference
-                </span>
+                <span className={status === 'processing' ? 'text-blue-500 font-bold' : status === 'finalizing' || status === 'success' ? 'text-emerald-500 font-bold' : ''}>2. Running ResNet50 classification inference</span>
                 {(status === 'finalizing' || status === 'success') && (
                   <span className="text-emerald-500">✓</span>
                 )}
               </div>
               <div className="flex items-center justify-between">
-                <span className={status === 'finalizing' ? 'text-blue-500 font-bold' : status === 'success' ? 'text-emerald-500 font-bold' : ''}>
-                  3. Creating clinical logs & notification alerts
-                </span>
+                <span className={status === 'finalizing' ? 'text-blue-500 font-bold' : status === 'success' ? 'text-emerald-500 font-bold' : ''}>3. Creating clinical logs &amp; notification alerts</span>
                 {status === 'success' && (
                   <span className="text-emerald-500">✓</span>
                 )}
@@ -282,10 +246,10 @@ function UploadPage() {
           >
             {isUploading ? 'Running Analysis Pipeline...' : 'Run Diagnostics'}
           </button>
-          
+
           <button
             disabled={isUploading}
-            onClick={() => navigate({ to: '/dashboard' })}
+            onClick={() => navigate('/dashboard')}
             className="demo-button demo-button-secondary px-6"
           >
             Cancel
@@ -295,3 +259,5 @@ function UploadPage() {
     </main>
   );
 }
+
+export default UploadPage;

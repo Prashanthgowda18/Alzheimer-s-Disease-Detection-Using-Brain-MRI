@@ -1,4 +1,4 @@
-import { Link, useNavigate, useRouter } from '@tanstack/react-router';
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import React, { useEffect, useState, useRef } from 'react';
 import ThemeToggle from './ThemeToggle';
 import { getActiveUser, signOut } from '../lib/auth';
@@ -7,7 +7,7 @@ import { mockDb } from '../lib/mockDb';
 import { isSupabaseConfigured } from '../lib/supabase';
 
 export default function Header() {
-  const router = useRouter();
+  const location = useLocation();
   const navigate = useNavigate();
 
   const [user, setUser] = useState(null);
@@ -27,14 +27,14 @@ export default function Header() {
 
   useEffect(() => {
     refreshSession();
-  }, [router.state.location.pathname]);
+  }, [location.pathname]);
 
   const fetchNotifs = async () => {
     if (!user) return;
     try {
       const res = await listNotifications();
       setNotifications(res.data || []);
-      setUnreadCount(res.data.filter((n) => !n.read_at).length);
+      setUnreadCount((res.data || []).filter((n) => !n.read_at).length);
     } catch (err) {
       console.error('Failed to load notifications', err);
     }
@@ -71,18 +71,24 @@ export default function Header() {
   const handleLogout = async () => {
     await signOut();
     setUser(null);
-    navigate({ to: '/' }).then(() => { window.location.reload(); });
+    navigate('/');
+    window.location.reload();
   };
 
-  const handleToggleMockRole = () => {
+  const handleToggleMockRole = async () => {
     if (isSupabaseConfigured) return;
     if (user?.role === 'admin') {
       mockDb.setCurrentUser('user-doc-123');
     } else {
       mockDb.setCurrentUser('user-admin-456');
     }
-    refreshSession().then(() => { navigate({ to: '/dashboard' }).then(() => { window.location.reload(); }); });
+    await refreshSession();
+    navigate('/dashboard');
+    window.location.reload();
   };
+
+  const navLinkClass = ({ isActive }) =>
+    `nav-link px-3 py-2 ${isActive ? 'is-active text-blue-500 font-bold' : ''}`;
 
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--line)] bg-[var(--header-bg)] px-4 backdrop-blur-lg">
@@ -94,12 +100,12 @@ export default function Header() {
           </Link>
           {user && (
             <div className="hidden md:flex items-center gap-1.5 text-sm font-semibold">
-              <Link to="/dashboard" className="nav-link px-3 py-2" activeProps={{ className: 'nav-link px-3 py-2 is-active' }}>Dashboard</Link>
-              <Link to="/patients" className="nav-link px-3 py-2" activeProps={{ className: 'nav-link px-3 py-2 is-active' }}>Patients</Link>
-              <Link to="/upload" className="nav-link px-3 py-2" activeProps={{ className: 'nav-link px-3 py-2 is-active' }}>Upload Scan</Link>
-              <Link to="/history" className="nav-link px-3 py-2" activeProps={{ className: 'nav-link px-3 py-2 is-active' }}>Inference History</Link>
+              <NavLink to="/dashboard" className={navLinkClass}>Dashboard</NavLink>
+              <NavLink to="/patients" className={navLinkClass}>Patients</NavLink>
+              <NavLink to="/upload" className={navLinkClass}>Upload Scan</NavLink>
+              <NavLink to="/history" className={navLinkClass}>Inference History</NavLink>
               {user.role === 'admin' && (
-                <Link to="/admin" className="nav-link px-3 py-2 text-cyan-600 dark:text-cyan-400" activeProps={{ className: 'nav-link px-3 py-2 is-active text-cyan-600 dark:text-cyan-400' }}>Admin Control</Link>
+                <NavLink to="/admin" className={({ isActive }) => `nav-link px-3 py-2 text-cyan-600 dark:text-cyan-400 ${isActive ? 'is-active font-bold' : ''}`}>Admin Control</NavLink>
               )}
             </div>
           )}
@@ -113,7 +119,7 @@ export default function Header() {
               <div className="relative" ref={notifRef}>
                 <button onClick={() => setShowNotifMenu(!showNotifMenu)} className="relative p-2 rounded-xl text-[var(--sea-ink-soft)] hover:bg-[var(--link-bg-hover)] hover:text-[var(--sea-ink)] focus:outline-none transition" aria-label="Notification alerts">
                   <svg className="w-5.5 h-5.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-                  {unreadCount > 0 && (<span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-red-5   00 text-[9px] text-white flex items-center justify-center font-bold">{unreadCount}</span>)}
+                  {unreadCount > 0 && (<span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-[9px] text-white flex items-center justify-center font-bold">{unreadCount}</span>)}
                 </button>
                 {showNotifMenu && (
                   <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-[var(--line)] bg-[var(--surface-strong)] shadow-2xl backdrop-blur-md overflow-hidden z-[100] animate-rise-in">
@@ -156,11 +162,11 @@ export default function Header() {
       </nav>
       {user && (
         <div className="md:hidden flex items-center justify-around border-t border-[var(--line)] py-2 text-[11px] font-bold">
-          <Link to="/dashboard" className="nav-link">Dashboard</Link>
-          <Link to="/patients" className="nav-link">Patients</Link>
-          <Link to="/upload" className="nav-link">Upload</Link>
-          <Link to="/history" className="nav-link">History</Link>
-          {user.role === 'admin' && (<Link to="/admin" className="nav-link text-cyan-600 dark:text-cyan-400">Admin</Link>)}
+          <NavLink to="/dashboard" className={navLinkClass}>Dashboard</NavLink>
+          <NavLink to="/patients" className={navLinkClass}>Patients</NavLink>
+          <NavLink to="/upload" className={navLinkClass}>Upload</NavLink>
+          <NavLink to="/history" className={navLinkClass}>History</NavLink>
+          {user.role === 'admin' && (<NavLink to="/admin" className={({ isActive }) => `nav-link ${isActive ? 'is-active text-cyan-600' : 'text-cyan-600'}`}>Admin</NavLink>)}
         </div>
       )}
     </header>
